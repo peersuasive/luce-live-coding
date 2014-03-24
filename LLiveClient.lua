@@ -16,11 +16,13 @@ Luce Live Coding Client
 ------------------------------------------------------------------------------]]
 
 local LUCE_EVENT = "PSM.EVENTS.LUCE.RELOAD "
+local LUCE_ERROR = "PSM.EVENTS.LUCE.ERROR "
 
 require       "pl"
 local zmq     = require "zmq"
 require       "zmq.zhelpers"
 local zmsg    = require"zmq.pmsg"
+require       "zmq.poller"
 
 -- load class
 -- grab MainWindow
@@ -44,33 +46,35 @@ local luceLiveEnv = {
 luceLiveEnv._G = luceLiveEnv
 
 local function prepare_chunk(file)
-    print("file", file)
     local f, err = loadfile(file)
     if not f then return f, err end
     setfenv(f, luceLiveEnv)
-    local chunk, err = f()
-    if(chunk)then
+    local r, chunk, err = pcall(f)
+    if(r and chunk)then
         return string.dump(chunk)
     else
-        return nil, err
+        return nil, chunk, err
     end
 end
 
+local poller  = zmq.poller(1)
 local context = zmq.init(1)
 local client  = context:socket(zmq.PUB)
 assert( client:connect("tcp://127.0.0.1:20027") )
---s_sleep(500)
+poller:poll(1) -- workaround bug in 4.X when pub isn't on the binding side
 
 -- send
 
 local status = 0
 local chunk, err = prepare_chunk(...)
+print("client", client)
 if(chunk)then
     client:send(LUCE_EVENT, zmq.SNDMORE)
     client:send(chunk)
 else
-    status = 1
-    print("ERROR:", chunk, err)
+    print(string.format("ERROR: %s", err))
+    client:send(LUCE_ERROR, zmq.SNDMORE)
+    client:send(err or "[no message]")
 end
 
 client:close()

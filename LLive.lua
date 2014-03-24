@@ -16,6 +16,7 @@ Luce Live Coding
 ------------------------------------------------------------------------------]]
 
 local LUCE_EVENT = "PSM.EVENTS.LUCE.RELOAD "
+local LUCE_ERROR = "PSM.EVENTS.LUCE.ERROR "
 
 require       "pl"
 local zmq     = require "zmq"
@@ -23,18 +24,19 @@ require       "zmq.zhelpers"
 local zmsg    = require"zmq.pmsg"
 require       "zmq.poller"
 
-local app, luce = require"luce.LApplication"("Luce Live Coding")
+local app, luce = require"luce.LApplication"("Luce Live Coding", ...)
 
 local context = zmq.init(1)
 local poller  = zmq.poller(1)
 local listen  = context:socket(zmq.SUB)
 listen:setopt(zmq.SUBSCRIBE, LUCE_EVENT)
+listen:setopt(zmq.SUBSCRIBE, LUCE_ERROR)
 assert( listen:bind("tcp://127.0.0.1:20027"), "Can't bind socket" )
 
 local function MainWindow(params)
     local app, luce = app, luce
     local Colours = luce.Colours
-    local wsize = {250,20}
+    local wsize = {250,40}
     local dw = luce:Document("Luce Live Coding: dw")
     local mc = luce:MainComponent("Luce Live Coding: mc")
     mc:paint(function(g)
@@ -66,24 +68,30 @@ end
 local res = 0
 local current = nil
 local function cb(socket)
-    socket:recv()
+    local what = socket:recv()
     local data = socket:recv()
+    if(what == LUCE_ERROR)then
+        print(string.format("***** %s *****", os.date()))
+        print(string.format("ERROR: %s", data))
+        return
+    end
     if(data == current )then
         print"(no change)"
         return
     end
     current = data
     local chunk, e = loadstring(data)
+    print(string.format("***** %s *****", os.date()))
     if not(chunk) then
         print(string.format("ERROR: %s", e))
     else
         local r, status, err = pcall(luce.reload, luce, chunk)
         if not(r) then 
-            print(string.format("LLLLL...That was a joke. Not loaded: you got a mistake somewhere: %s", status))
+            print(string.format("ERROR: %s", status))
         elseif not (status) then
-            print(string.format("LLLLL...That was a joke. Not loaded: you got a mistake somewhere: %s", err))
+            print(string.format("ERROR: %s", err))
         else
-            print("LLLLL...Loaded!")
+            print("OK")
         end
     end
 end

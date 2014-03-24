@@ -14,7 +14,7 @@ Further development would be smarter. If there's a need for it.
 Install
 =======
 
-link luce-live/luceLive somewhere in PATH
+link luce-live/lluceLive somewhere in PATH
 
 .. code:: bash
 
@@ -53,4 +53,5 @@ Roadmap
 * improve error message, show a console with colours, etc.
 * be more portable, at least OS X, at best Windows
 * if possible, update only what's changed
+* live coding on iOS, Android...  
 * ...

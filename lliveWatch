@@ -3,7 +3,7 @@
 ! [[ -f "$1" ]] && echo "Usage: ${0##*/} <main_file_to_watch.lua>" && exit 1
 main="$1"; shift
 
-ABORT_WITH_SERVER=1
+ABORT_WITH_SERVER=0
 
 LUA=${1:-$(which psm || which luajit || which lua5.1 || which lua)}
 [[ "$LUA" == nil ]] && LUA=""
@@ -22,8 +22,9 @@ echo "Loading main class..."
 ${LUA:+"$LUA"} "$ME"/LLiveClient.lua "$main"
 while true
 do
-    ! lsof -i tcp:20027 &>/dev/null \
-        && ((ABORT_WITH_SERVER)) && echo "Couldn't restart Luce Live Coding server!" && exit 1
+    ((ABORT_WITH_SERVER)) && \
+        ! lsof -i tcp:20027 &>/dev/null && echo "Lost contact with Luce Live Coding server - abort" && exit 1
+
     inotifywait -e modify "$main" &>/dev/null
     ${LUA:+"$LUA"} "$ME"/LLiveClient.lua "$main"
 done
