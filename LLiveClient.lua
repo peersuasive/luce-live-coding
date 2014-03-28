@@ -67,7 +67,6 @@ poller:poll(1) -- workaround bug in 4.X when pub isn't on the binding side
 
 local status = 0
 local chunk, err = prepare_chunk(...)
-print("client", client)
 if(chunk)then
     client:send(LUCE_EVENT, zmq.SNDMORE)
     client:send(chunk)
