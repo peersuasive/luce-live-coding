@@ -18,6 +18,8 @@ Luce Live Coding Client
 local LUCE_EVENT = "PSM.EVENTS.LUCE.RELOAD "
 local LUCE_ERROR = "PSM.EVENTS.LUCE.ERROR "
 
+local port = 20087
+
 require       "pl"
 local zmq     = require "zmq"
 require       "zmq.zhelpers"
@@ -36,11 +38,27 @@ local function assert(truth, msg, ...)
     print(string.format("ERROR: "..(msg or""), ...))
 end
 
+
+-- NOTE: could put safe_require around here...
+
+
 _G.LUCE_LIVE_CODING = 1
 local luceLiveEnv = {
     LUCE_LIVE_CODING = 1,
     print   = print,
     require = require,
+    --[[ FIXME: called but doesn't reload -- find why
+    require = function(p)
+        local _require = _require or require
+        print("loaded ?", package.loaded[p])
+        for k,v in next, package.loaded do print(k,v) end
+        package.loaded[p] = nil
+        if ( pcall(_require,p) ) then
+            print"CALL"
+            return _require(p)
+        end
+    end,
+    --]]
     assert  = assert,
 }
 luceLiveEnv._G = luceLiveEnv
@@ -60,20 +78,24 @@ end
 local poller  = zmq.poller(1)
 local context = zmq.init(1)
 local client  = context:socket(zmq.PUB)
-assert( client:connect("tcp://127.0.0.1:20027") )
+assert( client:connect("tcp://127.0.0.1:"..port) )
 poller:poll(1) -- workaround bug in 4.X when pub isn't on the binding side
 
 -- send
 
 local status = 0
-local chunk, err = prepare_chunk(...)
+local chunk = arg[1]
+local force = arg[2] or "false"
+local chunk, err = prepare_chunk(chunk)
 if(chunk)then
     client:send(LUCE_EVENT, zmq.SNDMORE)
-    client:send(chunk)
+    client:send(chunk, zmq.SNDMORE)
+    client:send(force)
 else
     print(string.format("ERROR: %s", err))
     client:send(LUCE_ERROR, zmq.SNDMORE)
-    client:send(err or "[no message]")
+    client:send(err or "[no message]", zmq.SNDMORE)
+    client:send(force)
 end
 
 client:close()

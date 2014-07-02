@@ -18,6 +18,8 @@ Luce Live Coding
 local LUCE_EVENT = "PSM.EVENTS.LUCE.RELOAD "
 local LUCE_ERROR = "PSM.EVENTS.LUCE.ERROR "
 
+local port = 20087
+
 require       "pl"
 local zmq     = require "zmq"
 require       "zmq.zhelpers"
@@ -31,7 +33,7 @@ local poller  = zmq.poller(1)
 local listen  = context:socket(zmq.SUB)
 listen:setopt(zmq.SUBSCRIBE, LUCE_EVENT)
 listen:setopt(zmq.SUBSCRIBE, LUCE_ERROR)
-assert( listen:bind("tcp://127.0.0.1:20027"), "Can't bind socket" )
+assert( listen:bind("tcp://127.0.0.1:"..port), "Can't bind socket" )
 
 local function MainWindow(params)
     local app, luce = app, luce
@@ -66,16 +68,19 @@ local function MainWindow(params)
 end
 
 local res = 0
+local force = false
 local current = nil
 local function cb(socket)
     local what = socket:recv()
     local data = socket:recv()
+    local force = socket:recv()
+    force = (force ~= "false") and (force ~= "0")
     if(what == LUCE_ERROR)then
         print(string.format("***** %s *****", os.date()))
         print(string.format("ERROR: %s", data))
         return
     end
-    if(data == current )then
+    if not(force) and (data == current)then
         print"(no change)"
         return
     end
