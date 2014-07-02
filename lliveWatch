@@ -3,6 +3,7 @@
 ! [[ -f "$1" ]] && echo "Usage: ${0##*/} <main_file_to_watch.lua>" && exit 1
 main="$1"; shift
 
+PORT=20087
 ABORT_WITH_SERVER=0
 
 LUA=${1:-$(which psm || which luajit || which lua5.1 || which lua)}
@@ -10,20 +11,20 @@ LUA=${1:-$(which psm || which luajit || which lua5.1 || which lua)}
 
 ME=$(dirname `readlink -f "$0"`)
 
-if ! lsof -i tcp:20027 &>/dev/null
+if ! lsof -i tcp:${PORT} &>/dev/null
 then
     ${LUA:+"$LUA"} "$ME"/LLive.lua &
 fi
 echo "Waiting for server..."
 sleep 1s
-! lsof -i tcp:20027 &>/dev/null && echo "Couldn't start Luce Live Coding server!" && exit 1
+! lsof -i tcp:${PORT} &>/dev/null && echo "Couldn't start Luce Live Coding server!" && exit 1
 
 echo "Loading main class..."
 ${LUA:+"$LUA"} "$ME"/LLiveClient.lua "$main"
 while true
 do
     ((ABORT_WITH_SERVER)) && \
-        ! lsof -i tcp:20027 &>/dev/null && echo "Lost contact with Luce Live Coding server - abort" && exit 1
+        ! lsof -i tcp:${PORT} &>/dev/null && echo "Lost contact with Luce Live Coding server - abort" && exit 1
 
     inotifywait -e modify "$main" &>/dev/null
     ${LUA:+"$LUA"} "$ME"/LLiveClient.lua "$main"
