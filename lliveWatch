@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+ABORT_WITH_SERVER=1
 
 ## TODO: watch the classes folder and watch new created classes on the fly
 
@@ -15,7 +16,6 @@ do
 done
 
 PORT=20087
-ABORT_WITH_SERVER=0
 
 LUA=${LUA:-$(which psm || which luajit || which lua5.1 || which lua)}
 [[ "$LUA" == nil ]] && LUA=""
