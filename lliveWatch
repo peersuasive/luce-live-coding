@@ -47,6 +47,7 @@ echo "Loading main class..."
 ${LUA:+"$LUA"} "$ME"/LLiveClient.lua "$main"
 while true
 do
+    ## TODO: check PID instead of socket
     lsof -i tcp:${PORT} &>/dev/null
     notRunning=$?
     if ((ABORT_WITH_SERVER))
