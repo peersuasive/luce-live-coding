@@ -1,31 +1,62 @@
 #!/usr/bin/env bash
 
+## TODO: watch the classes folder and watch new created classes on the fly
+
+[[ "$1" == -l ]] && LUA="$2" && shift 2
+
 ! [[ -f "$1" ]] && echo "Usage: ${0##*/} <main_file_to_watch.lua>" && exit 1
 main="$1"; shift
+
+classes=""
+while (($#))
+do
+    classes+=" $1"
+    shift
+done
 
 PORT=20087
 ABORT_WITH_SERVER=0
 
-LUA=${1:-$(which psm || which luajit || which lua5.1 || which lua)}
+LUA=${LUA:-$(which psm || which luajit || which lua5.1 || which lua)}
 [[ "$LUA" == nil ]] && LUA=""
 
 ME=$(dirname `readlink -f "$0"`)
 
-if ! lsof -i tcp:${PORT} &>/dev/null
-then
-    ${LUA:+"$LUA"} "$ME"/LLive.lua &
-fi
-echo "Waiting for server..."
-sleep 1s
-! lsof -i tcp:${PORT} &>/dev/null && echo "Couldn't start Luce Live Coding server!" && exit 1
+restartServer() {
+    if ! lsof -i tcp:${PORT} &>/dev/null
+    then
+        ${LUA:+"$LUA"} "$ME"/LLive.lua &
+    fi
+    echo "Waiting for server..."
+    ok=1
+    timeout=0
+    max=5
+    step=0.5
+    echo `lua -e "print( ($timeout < $max) and 1 or 0 )"`
+    while (( `lua -e "print( ($timeout < $max) and 1 or 0 )"` ))
+    do
+        lsof -i tcp:${PORT} &>/dev/null && ok=0 && break
+        sleep $step
+        timeout=$(bc <<< $timeout+$step)
+    done
+    return $ok
+}
+! restartServer && echo "Couldn't start Luce Live Coding server!" && exit 1
 
 echo "Loading main class..."
 ${LUA:+"$LUA"} "$ME"/LLiveClient.lua "$main"
 while true
 do
-    ((ABORT_WITH_SERVER)) && \
-        ! lsof -i tcp:${PORT} &>/dev/null && echo "Lost contact with Luce Live Coding server - abort" && exit 1
+    lsof -i tcp:${PORT} &>/dev/null
+    notRunning=$?
+    if ((ABORT_WITH_SERVER))
+    then
+        ((notRunning)) && echo "Lost contact with Luce Live Coding server - abort" && exit 1
+    else
+        ((notRunning)) && ! restartServer && echo "Can't restart server" && exit 1
+    fi
 
-    inotifywait -e modify "$main" &>/dev/null
-    ${LUA:+"$LUA"} "$ME"/LLiveClient.lua "$main"
+    inotifywait -t 1 -e modify "$main" $classes &>/dev/null
+    (($?==2)) && continue
+    ${LUA:+"$LUA"} "$ME"/LLiveClient.lua "$main" "true"
 done

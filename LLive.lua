@@ -25,6 +25,7 @@ local zmq     = require "zmq"
 require       "zmq.zhelpers"
 local zmsg    = require"zmq.pmsg"
 require       "zmq.poller"
+local htime    = function() local s, u, n = htime.time(); return s..u end
 
 local app, luce = require"luce.LApplication"("Luce Live Coding", ...)
 
@@ -70,9 +71,13 @@ end
 local res = 0
 local force = false
 local current = nil
+local remote_control = nil
+local ms = 0
 local function cb(socket)
     local what = socket:recv()
     local data = socket:recv()
+    local rcontrol = socket:recv()
+    ms = tonumber(socket:recv()) * 1000
     local force = socket:recv()
     force = (force ~= "false") and (force ~= "0")
     if(what == LUCE_ERROR)then
@@ -90,6 +95,14 @@ local function cb(socket)
     if not(chunk) then
         print(string.format("ERROR: %s", e))
     else
+        if(rcontrol ~= "")then
+            local rcontrol_chunk, e2 = loadstring(rcontrol)
+            if not(rcontrol_chunk)then
+                print(string.format("ERROR: %s", e2))
+                return
+            end
+            remote_control = rcontrol_chunk
+        end
         local r, status, err = pcall(luce.reload, luce, chunk)
         if not(r) then 
             print(string.format("ERROR: %s", status))
@@ -102,9 +115,16 @@ local function cb(socket)
 end
 poller:add(listen, zmq.POLLIN, cb)
 
-res = app:start(MainWindow, function(...)
-    poller:poll(1)
-end)
+local stopNow = false
+local lastTime, now = htime(), 0
+res = app:start(MainWindow, { function(...)
+    local now = htime()
+    poller:poll(0)
+    if (remote_control) and ((ms==0) or (ms>0 and ms < (now - lastTime))) then
+        remote_control()
+        lastTime = now
+    end
+end, 1})
 
 listen:close()
 context:term()

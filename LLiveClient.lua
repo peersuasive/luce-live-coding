@@ -67,11 +67,11 @@ local function prepare_chunk(file)
     local f, err = loadfile(file)
     if not f then return f, err end
     setfenv(f, luceLiveEnv)
-    local r, chunk, err = pcall(f)
+    local r, chunk, errOrControl, ms = pcall(f)
     if(r and chunk)then
-        return string.dump(chunk)
+        return string.dump(chunk), errOrControl and string.dump(errOrControl) or "", tostring(ms)
     else
-        return nil, chunk, err
+        return nil, chunk, errOrControl
     end
 end
 
@@ -86,15 +86,18 @@ poller:poll(1) -- workaround bug in 4.X when pub isn't on the binding side
 local status = 0
 local chunk = arg[1]
 local force = arg[2] or "false"
-local chunk, err = prepare_chunk(chunk)
+local chunk, errOrControl, ms = prepare_chunk(chunk)
 if(chunk)then
     client:send(LUCE_EVENT, zmq.SNDMORE)
     client:send(chunk, zmq.SNDMORE)
+    client:send(errOrControl, zmq.SNDMORE)
+    client:send(ms, zmq.SNDMORE)
     client:send(force)
 else
     print(string.format("ERROR: %s", err))
     client:send(LUCE_ERROR, zmq.SNDMORE)
-    client:send(err or "[no message]", zmq.SNDMORE)
+    client:send(errOrControl or "[no message]", zmq.SNDMORE)
+    client:send("0", zmq.SNDMORE)
     client:send(force)
 end
 
