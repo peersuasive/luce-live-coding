@@ -90,8 +90,8 @@ local chunk, errOrControl, ms = prepare_chunk(chunk)
 if(chunk)then
     client:send(LUCE_EVENT, zmq.SNDMORE)
     client:send(chunk, zmq.SNDMORE)
-    client:send(errOrControl, zmq.SNDMORE)
-    client:send(ms, zmq.SNDMORE)
+    client:send(errOrControl or "", zmq.SNDMORE)
+    client:send(tostring(ms or 0), zmq.SNDMORE)
     client:send(force)
 else
     print(string.format("ERROR: %s", err))
