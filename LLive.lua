@@ -71,6 +71,7 @@ end
 local res = 0
 local force = false
 local current = nil
+local previous_control = ""
 local remote_control = nil
 local ms = 0
 local function cb(socket)
@@ -96,12 +97,18 @@ local function cb(socket)
         print(string.format("ERROR: %s", e))
     else
         if(rcontrol ~= "")then
-            local rcontrol_chunk, e2 = loadstring(rcontrol)
-            if not(rcontrol_chunk)then
-                print(string.format("ERROR: %s", e2))
-                return
+            if not(previous_control==rcontrol)then
+                local rcontrol_chunk, err = loadstring(rcontrol)
+                if not(rcontrol_chunk)then
+                    print(string.format("ERROR: %s", err))
+                    return
+                end
+                print("reloading control")
+                previous_control = rcontrol
+                remote_control = rcontrol_chunk
+            else
+                print("NOT reloading control")
             end
-            remote_control = rcontrol_chunk
         end
         local r, status, err = pcall(luce.reload, luce, chunk)
         if not(r) then 
@@ -115,13 +122,13 @@ local function cb(socket)
 end
 poller:add(listen, zmq.POLLIN, cb)
 
-local stopNow = false
 local lastTime, now = htime(), 0
 res = app:start(MainWindow, { function(...)
-    local now = htime()
     poller:poll(0)
-    if (remote_control) and ((ms==0) or (ms>0 and ms < (now - lastTime))) then
-        remote_control()
+    local now = htime()
+    local control = remote_control
+    if (control) and ((ms==0) or (ms>0 and ms < (now - lastTime))) then
+        control()
         lastTime = now
     end
 end, 1})
