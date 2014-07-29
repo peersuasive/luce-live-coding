@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+
+inotifywait=$( which inotifywait) || { echo "Please install inotify-tools first"; exit 1; }
 ABORT_WITH_SERVER=1
 
 ## TODO: watch the classes folder and watch new created classes on the fly
@@ -57,7 +59,7 @@ do
         ((notRunning)) && ! restartServer && echo "Can't restart server" && exit 1
     fi
 
-    inotifywait -t 1 -e modify "$main" $classes &>/dev/null
+    $inotifywait -t 1 -e modify "$main" $classes &>/dev/null
     (($?==2)) && continue
     ${LUA:+"$LUA"} "$ME"/LLiveClient.lua "$main" "true"
 done
