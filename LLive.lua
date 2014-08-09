@@ -27,7 +27,7 @@ local zmsg    = require"zmq.pmsg"
 require       "zmq.poller"
 local htime    = function() local s, u, n = htime.time(); return s..u end
 
-local app, luce = require"luce.LApplication"("Luce Live Coding", ...)
+local app, luce = require"luce.LApplication"("Luce Live Coding", ".", ...) -- set prog to "."
 
 local context = zmq.init(1)
 local poller  = zmq.poller(1)
