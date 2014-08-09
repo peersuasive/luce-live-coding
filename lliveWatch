@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+base=$(dirname "$(readlink -f "$0")")
+
+## dont set luce, it has to be local
+export LUA_PATH="$base/lib/?.lua;$(lua -e 'print(package.path)')"
+export LUA_CPATH="$base/lib/?.so;$(lua -e 'print(package.cpath)')"
+
 inotifywait=$( which inotifywait) || { echo "Please install inotify-tools first"; exit 1; }
 ABORT_WITH_SERVER=1
 
