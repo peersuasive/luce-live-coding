@@ -25,7 +25,7 @@ done
 
 PORT=20087
 
-LUA=${LUA:-$(which psm || which luajit || which lua5.1 || which lua)}
+LUA=${LUA:-$(which luajit || which lua5.1 || which lua || which psm)}
 [[ "$LUA" == nil ]] && LUA=""
 
 ME=$(dirname `readlink -f "$0"`)

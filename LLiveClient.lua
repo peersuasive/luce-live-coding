@@ -1,4 +1,4 @@
-#!/usr/bin/env psm
+#!/usr/bin/env luajit
 --[[----------------------------------------------------------------------------
 
 liveClient.lua
@@ -20,11 +20,9 @@ local LUCE_ERROR = "PSM.EVENTS.LUCE.ERROR "
 
 local port = 20087
 
-require       "pl"
-local zmq     = require "zmq"
-require       "zmq.zhelpers"
-local zmsg    = require"zmq.pmsg"
-require       "zmq.poller"
+local zmq     = require"lzmq"
+local zpoller = require"lzmq.poller"
+local assert = zmq.assert
 
 -- load class
 -- grab MainWindow
@@ -75,8 +73,8 @@ local function prepare_chunk(file)
     end
 end
 
-local poller  = zmq.poller(1)
-local context = zmq.init(1)
+local poller  = zpoller.new(1)
+local context = zmq.context(1)
 local client  = context:socket(zmq.PUB)
 assert( client:connect("tcp://127.0.0.1:"..port) )
 poller:poll(1) -- workaround bug in 4.X when pub isn't on the binding side

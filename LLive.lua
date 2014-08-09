@@ -1,4 +1,4 @@
-#!/usr/bin/env psm
+#!/usr/bin/env luajit
 --[[----------------------------------------------------------------------------
 
 live.lua
@@ -20,20 +20,23 @@ local LUCE_ERROR = "PSM.EVENTS.LUCE.ERROR "
 
 local port = 20087
 
-require       "pl"
-local zmq     = require "zmq"
-require       "zmq.zhelpers"
-local zmsg    = require"zmq.pmsg"
-require       "zmq.poller"
-local htime    = function() local s, u, n = htime.time(); return s..u end
+local zmq     = require"lzmq"
+local zpoller = require"lzmq.poller"
+local assert  = zmq.assert
+local htime   = require"htime"
+local htime   = function() local s, u, n = htime.time(); return s..u end
+
+local function printf(msg, ...)
+    print(string.format(msg, ...))
+end
 
 local app, luce = require"luce.LApplication"("Luce Live Coding", ".", ...) -- set prog to "."
 
-local context = zmq.init(1)
-local poller  = zmq.poller(1)
+local context = zmq.context(1)
+local poller  = zpoller.new(1)
 local listen  = context:socket(zmq.SUB)
-listen:setopt(zmq.SUBSCRIBE, LUCE_EVENT)
-listen:setopt(zmq.SUBSCRIBE, LUCE_ERROR)
+listen:set_subscribe(LUCE_EVENT)
+listen:set_subscribe(LUCE_ERROR)
 assert( listen:bind("tcp://127.0.0.1:"..port), "Can't bind socket" )
 
 local function MainWindow(params)
@@ -78,7 +81,10 @@ local function cb(socket)
     local what = socket:recv()
     local data = socket:recv()
     local rcontrol = socket:recv()
-    ms = tonumber(socket:recv()) * 1000
+    --ms = tonumber(socket:recv()) * 1000
+    local itv = socket:recv()
+    ms = tonumber(itv) * 1000
+
     local force = socket:recv()
     force = (force ~= "false") and (force ~= "0")
     if(what == LUCE_ERROR)then
