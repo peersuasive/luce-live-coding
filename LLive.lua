@@ -83,7 +83,7 @@ local function cb(socket)
     local rcontrol = socket:recv()
     --ms = tonumber(socket:recv()) * 1000
     local itv = socket:recv()
-    ms = tonumber(itv) * 1000
+    ms = tonumber(itv or 0) * 1000
 
     local force = socket:recv()
     force = (force ~= "false") and (force ~= "0")
