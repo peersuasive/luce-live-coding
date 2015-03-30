@@ -35,7 +35,7 @@ restartServer() {
     then
         ${LUA:+"$LUA"} "$ME"/LLive.lua &
     fi
-    echo "Waiting for server..."
+    echo "D: Waiting for server..."
     ok=1
     timeout=0
     max=5
@@ -49,9 +49,9 @@ restartServer() {
     done
     return $ok
 }
-! restartServer && echo "Couldn't start Luce Live Coding server!" && exit 1
+! restartServer && echo "ERROR: Couldn't start Luce Live Coding server!" && exit 1
 
-echo "Loading main class..."
+echo "D: Loading main class..."
 ${LUA:+"$LUA"} "$ME"/LLiveClient.lua "$main"
 while true
 do
@@ -60,9 +60,9 @@ do
     notRunning=$?
     if ((ABORT_WITH_SERVER))
     then
-        ((notRunning)) && echo "Lost contact with Luce Live Coding server - abort" && exit 1
+        ((notRunning)) && echo "ERROR: Lost contact with Luce Live Coding server - abort" && exit 1
     else
-        ((notRunning)) && ! restartServer && echo "Can't restart server" && exit 1
+        ((notRunning)) && ! restartServer && echo "ERROR: Can't restart server" && exit 1
     fi
 
     $inotifywait -t 1 -e modify "$main" $classes &>/dev/null

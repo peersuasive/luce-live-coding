@@ -93,7 +93,7 @@ local function cb(socket)
         return
     end
     if not(force) and (data == current)then
-        print"(no change)"
+        print"D: (no change)"
         return
     end
     current = data
@@ -109,11 +109,11 @@ local function cb(socket)
                     print(string.format("ERROR: %s", err))
                     return
                 end
-                print("reloading control")
+                print("D: reloading control")
                 previous_control = rcontrol
                 remote_control = rcontrol_chunk
             else
-                print("NOT reloading control")
+                print("D: NOT reloading control")
             end
         end
         local r, status, err = pcall(luce.reload, luce, chunk)
